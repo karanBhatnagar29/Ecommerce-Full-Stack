@@ -17,6 +17,5 @@ export class CreateOrderDto {
   @Type(() => OrderProduct)
   products: OrderProduct[];
 
-  @IsNumber()
-  totalPrice: number;
+
 }

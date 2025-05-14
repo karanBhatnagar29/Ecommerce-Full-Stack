@@ -3,6 +3,12 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
 export type ProductDocument = Product & Document;
+export interface Product extends Document {
+  _id: string; // or ObjectId depending on how it's defined
+  price: number;
+  name: string;
+  // any other product properties
+}
 
 @Schema({ timestamps: true }) // 👈 auto manages createdAt, updatedAt
 export class Product {
