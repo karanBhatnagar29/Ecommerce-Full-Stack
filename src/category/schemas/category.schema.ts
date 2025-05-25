@@ -11,6 +11,9 @@ export class Category {
 
   @Prop()
   description?: string;
+
+  @Prop() // ✅ Add this line
+  image?: string;
 }
 
 export const CategorySchema = SchemaFactory.createForClass(Category);

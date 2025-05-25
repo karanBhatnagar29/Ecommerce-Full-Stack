@@ -9,4 +9,8 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  image?: string; // <-- New field for category image URL or path
 }
