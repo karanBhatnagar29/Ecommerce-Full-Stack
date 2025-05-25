@@ -21,7 +21,7 @@ export class AuthService {
 
   //signup
   async signUp(signUpDto: SignupDto) {
-    const { email, password, address, username } = signUpDto;
+    const { email, password, address, role } = signUpDto;
 
     const existingUser = await this.userModel.findOne({ email });
     if (existingUser) {
@@ -31,10 +31,10 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new this.userModel({
-      username,
       email,
       password: hashedPassword,
       address,
+      role,
     });
     await user.save();
 
@@ -48,24 +48,32 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
     const exisitingUser = await this.userModel.findOne({ email });
+
     if (!exisitingUser) {
       throw new Error('User not found');
     }
+
     const isPasswordValid = await bcrypt.compare(
       password,
       exisitingUser.password,
     );
-
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid Credentials');
     }
-    const payload = { email: exisitingUser.email, sub: exisitingUser._id };
+
+    const payload = {
+      email: exisitingUser.email,
+      sub: exisitingUser._id,
+      role: exisitingUser.role, // ✅ Include role in the token
+    };
+
     const token = this.jwtService.sign(payload);
+
     return {
       token,
       user: {
         email: exisitingUser.email,
-        password: exisitingUser.password,
+        role: exisitingUser.role, // Optional: include in response if you want
       },
     };
   }

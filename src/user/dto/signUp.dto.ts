@@ -7,9 +7,9 @@ import {
 } from 'class-validator';
 
 export class SignupDto {
-  @IsNotEmpty()
-  @IsString()
-  username: string;
+  // @IsNotEmpty({ message: 'Username is required' })
+  // @IsString()
+  // username: string;
 
   @IsEmail()
   email: string;
@@ -21,4 +21,8 @@ export class SignupDto {
   @IsOptional()
   @IsString()
   address: string;
+
+  @IsOptional()
+  @IsString()
+  role: string = 'user'; // Default role is 'user'
 }

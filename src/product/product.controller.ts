@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -16,13 +17,13 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   // get(all)
-  @Get('all')
+  @Get()
   async getAllProducts() {
     return await this.productService.getAllProducts();
   }
 
   // get(by id)
-  @Get()
+  @Get('/:id')
   async getProductById(@Param('id') id: string) {
     return await this.productService.getProductById(id);
   }
@@ -45,6 +46,11 @@ export class ProductController {
   // delete('delete/:id)
   @Delete('delete/:id')
   async deleteProduct(@Param('id') id: string) {
-    return await this.productService.deleteProduct(id);
+    await this.productService.deleteProduct(id);
+    return { message: 'Product deleted successfully' };
+  }
+  @Get('/category/:name')
+  getProductsByCategory(@Param('name') name: string) {
+    return this.productService.getProductsByCategoryName(name);
   }
 }

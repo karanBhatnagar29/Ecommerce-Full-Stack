@@ -1,29 +1,62 @@
-// src/product/dto/create-product.dto.ts
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+class VariantDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Variant label is required' })
+  label: string;
+
+  @IsNumber()
+  price: number;
+
+  @IsNumber()
+  stock: number;
+}
 
 export class CreateProductDto {
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Name is required' })
   name: string;
 
   @IsString()
   @IsOptional()
   description?: string;
 
-  @IsNumber()
-  price: number;
+  @IsString()
+  @IsNotEmpty({ message: 'Category is required' })
+  category: string;
 
   @IsString()
   @IsOptional()
   brand?: string;
 
-  @IsString()
-  category: string;
-
   @IsArray()
   @IsOptional()
   images?: string[];
 
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VariantDto)
+  variants: VariantDto[];
+
   @IsNumber()
-  stock: number;
+  @IsOptional()
+  rating?: number;
+
+  @IsNumber()
+  @IsOptional()
+  numReviews?: number;
+
+  @IsOptional()
+  gstIncluded?: boolean;
+
+  @IsOptional()
+  courierExtra?: boolean;
 }

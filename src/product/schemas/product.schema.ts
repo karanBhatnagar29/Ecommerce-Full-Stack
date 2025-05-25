@@ -1,43 +1,56 @@
 // src/product/schemas/product.schema.ts
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
+import { Category } from '../../category/schemas/category.schema';
 
 export type ProductDocument = Product & Document;
-export interface Product extends Document {
-  _id: string; // or ObjectId depending on how it's defined
+
+@Schema()
+export class Variant {
+  @Prop({ required: true })
+  label: string;
+
+  @Prop({ required: true })
   price: number;
-  name: string;
-  // any other product properties
+
+  @Prop({ default: 0 })
+  stock: number;
 }
 
-@Schema({ timestamps: true }) // 👈 auto manages createdAt, updatedAt
+export const VariantSchema = SchemaFactory.createForClass(Variant);
+
+@Schema({ timestamps: true })
 export class Product {
   @Prop({ required: true })
   name: string;
 
   @Prop()
-  description: string;
+  description?: string;
 
-  @Prop({ required: true })
-  price: number;
+  @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
+  category: Types.ObjectId;
 
   @Prop()
-  brand: string;
-
-  @Prop({ required: true })
-  category: string;
+  brand?: string;
 
   @Prop({ type: [String] })
-  images: string[];
+  images?: string[];
 
-  @Prop({ required: true, default: 0 })
-  stock: number;
+  @Prop({ type: [VariantSchema], required: true })
+  variants: Variant[];
 
   @Prop({ default: 0 })
   rating: number;
 
   @Prop({ default: 0 })
   numReviews: number;
+
+  @Prop()
+  gstIncluded?: boolean;
+
+  @Prop()
+  courierExtra?: boolean;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
