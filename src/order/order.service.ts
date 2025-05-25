@@ -50,7 +50,50 @@ export class OrderService {
   }
 
   // Create order
+  async createOrder(createOrderDto: CreateOrderDto) {
+    const { userId, products, shippingDetails } = createOrderDto;
 
+    // Validate and calculate total price
+    let totalPrice = 0;
+
+    // For each product, fetch product details and find matching variant price
+    for (const item of products) {
+      const product = await this.productModel.findById(item.productId).exec();
+      if (!product) {
+        throw new NotFoundException(
+          `Product with ID ${item.productId} not found`,
+        );
+      }
+
+      // Find matching variant price
+      const variant = product.variants.find(
+        (v) => v.label === item.variantLabel,
+      );
+      if (!variant) {
+        throw new NotFoundException(
+          `Variant "${item.variantLabel}" not found for product ${product.name}`,
+        );
+      }
+
+      // subtotal = price * quantity
+      totalPrice += variant.price * item.quantity;
+    }
+
+    // Create order document
+    const order = new this.orderModel({
+      user: new Types.ObjectId(userId),
+      products: products.map((p) => ({
+        productId: new Types.ObjectId(p.productId),
+        quantity: p.quantity,
+        variantLabel: p.variantLabel,
+      })),
+      totalPrice,
+      status: OrderStatus.Pending,
+      shippingDetails,
+    });
+
+    return order.save();
+  }
 
   // cancel order
   async cancelOrder(orderId: string, userId: string) {

@@ -53,17 +53,14 @@ export class OrderController {
     return orders;
   }
   // POST /order/:userId
-  // @Post(':userId')
-  // async createOrder(
-  //   @Param('userId') userId: string, // ✅ Expect userId from the route
-  //   @Body() createOrderDto: CreateOrderDto,
-  // ) {
-  //   try {
-  //     return await this.orderService.createOrder(createOrderDto, userId); // ✅ Pass userId
-  //   } catch (error) {
-  //     throw new NotFoundException(error.message || 'Failed to create order.');
-  //   }
-  // }
+  @Post()
+  async createOrder(@Body() createOrderDto: CreateOrderDto) {
+    const order = await this.orderService.createOrder(createOrderDto);
+    return {
+      message: 'Order created successfully',
+      order,
+    };
+  }
 
   // cancel order
   @Delete('cancel/:id')
