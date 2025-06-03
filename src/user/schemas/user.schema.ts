@@ -9,17 +9,21 @@ export class User {
   @Prop()
   username: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ sparse: true, unique: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop()
   password: string;
 
   @Prop()
   address?: string;
 
   @Prop({ default: 'user' })
-  role: string;  // 'user' or 'admin'
+  role: string;
+
+  // 👇 New field for OTP login
+  @Prop({ unique: true, sparse: true }) // `sparse` allows null for email-only users
+  phone?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

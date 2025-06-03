@@ -77,4 +77,8 @@ export class CategoryController {
     this.categoryService.delete(id);
     return { message: 'Category deleted successfully' };
   }
+  @Get('slug/:slug')
+  async findBySlug(@Param('slug') slug: string) {
+    return this.categoryService.findBySlug(slug);
+  }
 }

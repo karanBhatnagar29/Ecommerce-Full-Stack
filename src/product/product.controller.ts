@@ -7,13 +7,18 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('product')
 export class ProductController {
+  cloudinaryService: any;
   constructor(private readonly productService: ProductService) {}
 
   // get(all)
@@ -30,17 +35,43 @@ export class ProductController {
 
   // create('create')
   @Post('create')
-  async createProduct(@Body() createProductDto: CreateProductDto) {
-    return await this.productService.createProduct(createProductDto);
+  @UseInterceptors(FilesInterceptor('images')) // expects files in 'images' field
+  async createProduct(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: any,
+  ) {
+    const parsedVariants =
+      typeof body.variants === 'string'
+        ? JSON.parse(body.variants)
+        : body.variants;
+
+    const createDto: CreateProductDto = {
+      ...body,
+      variants: parsedVariants,
+    };
+
+    return this.productService.createProduct(createDto, files);
   }
 
   // patch('update/:id')
   @Patch('update/:id')
+  @UseInterceptors(FilesInterceptor('images')) // Accepts files in 'images' field
   async updateProduct(
     @Param('id') id: string,
-    @Body() updateProductDto: UpdateProductDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: any,
   ) {
-    return await this.productService.updateProduct(id, updateProductDto);
+    const parsedVariants =
+      typeof body.variants === 'string'
+        ? JSON.parse(body.variants)
+        : body.variants;
+
+    const updateDto: UpdateProductDto = {
+      ...body,
+      variants: parsedVariants,
+    };
+
+    return this.productService.updateProduct(id, updateDto, files);
   }
 
   // delete('delete/:id)
@@ -49,8 +80,8 @@ export class ProductController {
     await this.productService.deleteProduct(id);
     return { message: 'Product deleted successfully' };
   }
-  @Get('/category/:name')
-  getProductsByCategory(@Param('name') name: string) {
-    return this.productService.getProductsByCategoryName(name);
+  @Get('/category/:slug')
+  getProductsByCategory(@Param('slug') slug: string) {
+    return this.productService.getProductsByCategorySlug(slug);
   }
 }

@@ -1,4 +1,3 @@
-import { Prop } from '@nestjs/mongoose';
 import {
   IsMongoId,
   IsNotEmpty,
@@ -19,4 +18,7 @@ export class AddItemDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+
+ 
+
 }

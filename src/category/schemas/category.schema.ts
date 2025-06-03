@@ -12,8 +12,24 @@ export class Category {
   @Prop()
   description?: string;
 
-  @Prop() // ✅ Add this line
+  @Prop()
   image?: string;
+
+  @Prop({ required: true, unique: true })
+  slug: string; // ✅ Add slug field
 }
 
 export const CategorySchema = SchemaFactory.createForClass(Category);
+
+CategorySchema.pre('save', function (next) {
+  if (this.isModified('name')) {
+    this.slug = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // Remove all non-word characters except spaces and hyphens
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Collapse multiple hyphens
+      .replace(/^-+|-+$/g, ''); // Trim leading/trailing hyphens
+  }
+  next();
+});

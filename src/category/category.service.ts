@@ -107,4 +107,13 @@ export class CategoryService {
     if (!deleted) throw new NotFoundException('Category not found');
     return deleted;
   }
+  async findBySlug(slug: string) {
+  const category = await this.categoryModel.findOne({ slug });
+
+  if (!category) {
+    throw new NotFoundException(`Category with slug '${slug}' not found`);
+  }
+
+  return category;
+}
 }

@@ -10,16 +10,21 @@ export class CartItem {
   productId: Types.ObjectId;
 
   @Prop({ required: true })
-  variantLabel: string; // e.g. "Large Pack"
+  variantLabel: string;
 
   @Prop({ required: true })
-  price: number; // price per unit for this variant
+  price: number;
 
   @Prop({ required: true })
-  subtotal: number; // price * quantity
+  subtotal: number;
 
   @Prop({ required: true, min: 1 })
   quantity: number;
+
+  @Prop({ required: false })
+  image: string; // New field: product thumbnail or image URL
+
+
 }
 
 const CartItemSchema = SchemaFactory.createForClass(CartItem);

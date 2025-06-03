@@ -76,7 +76,7 @@ export class OrderController {
 
   //status
   @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles('admin') // Only admin allowed to update status
+ 
   @Patch(':id/status')
   async updateStatus(
     @Param('id') id: string,

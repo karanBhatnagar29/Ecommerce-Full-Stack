@@ -17,7 +17,7 @@ import { User, UserSchema } from 'src/user/schemas/user.schema';
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      inject:[ConfigService],
+      inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         secret: config.get('JWT_SECRET'),
         signOptions: {
@@ -26,7 +26,7 @@ import { User, UserSchema } from 'src/user/schemas/user.schema';
       }),
     }),
   ],
-  providers: [AuthService,JwtStrategy],
+  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
 })
 export class AuthModule {}

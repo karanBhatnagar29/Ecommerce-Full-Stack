@@ -27,7 +27,7 @@ export class CartController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   async addToCart(@Req() req, @Body() dto: AddItemDto) {
     return this.cartService.addItemToCart(req.user.userId, dto); // ✅ use userId from JWT
   }
