@@ -12,10 +12,10 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: ['http://localhost:3001'], // allow your frontend origin
+    origin: 'http://51.20.166.225:3001',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();

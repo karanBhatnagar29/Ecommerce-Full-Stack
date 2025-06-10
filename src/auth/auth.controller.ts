@@ -1,7 +1,5 @@
 import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { SignupDto } from '../user/dto/signUp.dto';
-import { LoginDto } from '../user/dto/login.dto';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -9,32 +7,23 @@ import { AuthGuard } from '@nestjs/passport';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  //signup
-  @Post('signup')
-  async signUp(@Body() signUpDto: SignupDto) {
-    return this.authService.signUp(signUpDto);
-  }
-
-  //   Login
-
-  @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
-  }
-
+  // ✅ Request OTP
   @Post('request-otp')
-  requestOtp(@Body('phone') phone: string) {
-    return this.authService.requestOtp(phone);
+  requestOtp(@Body('email') email: string) {
+    return this.authService.requestOtp(email);
   }
 
+  // ✅ Verify OTP (via email)
   @Post('verify-otp')
-  verifyOtp(@Body() dto: { phone: string; otp: string }) {
-    return this.authService.verifyOtp(dto.phone, dto.otp);
+  verifyOtp(@Body() dto: { email: string; otp: string }) {
+    return this.authService.verifyOtp(dto.email, dto.otp);
   }
+
+  // ✅ Complete Profile (requires JWT)
   @Put('complete-profile')
   @UseGuards(AuthGuard('jwt'))
   async completeProfile(@Req() req, @Body() dto: CompleteProfileDto) {
-    const userId = req.user.userId; // ✅ not `sub`
+    const userId = req.user.userId; // your JwtStrategy maps this as `userId`, not `sub`
     return this.authService.completeProfile(userId, dto);
   }
 }

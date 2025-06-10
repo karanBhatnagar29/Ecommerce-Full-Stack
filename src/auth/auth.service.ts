@@ -6,11 +6,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { SignupDto } from '../user/dto/signUp.dto';
-import * as bcrypt from 'bcryptjs';
-import { LoginDto } from '../user/dto/login.dto';
 import { User, UserDocument } from 'src/user/schemas/user.schema';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
+import * as nodemailer from 'nodemailer';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -19,101 +18,60 @@ export class AuthService {
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
-  //signup
-  async signUp(signUpDto: SignupDto) {
-    const { email, password, address, role } = signUpDto;
-
-    const existingUser = await this.userModel.findOne({ email });
-    if (existingUser) {
-      throw new ConflictException('User already exists');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new this.userModel({
-      email,
-      password: hashedPassword,
-      address,
-      role,
-    });
-    await user.save();
-
-    return {
-      message: 'Signup success',
-      user,
-    };
-  }
-  //Login
-
-  async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
-    const exisitingUser = await this.userModel.findOne({ email });
-
-    if (!exisitingUser) {
-      throw new Error('User not found');
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      exisitingUser.password,
-    );
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid Credentials');
-    }
-
-    const payload = {
-      email: exisitingUser.email,
-      sub: exisitingUser._id,
-      role: exisitingUser.role, // ✅ Include role in the token
-    };
-
-    const token = this.jwtService.sign(payload);
-
-    return {
-      token,
-      user: {
-        email: exisitingUser.email,
-        role: exisitingUser.role, // Optional: include in response if you want
-      },
-    };
-  }
-
   // ✨ 1. Request OTP
-  async requestOtp(phone: string) {
+  async requestOtp(email: string) {
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      throw new Error('Invalid email address');
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    this.otpStore.set(phone, otp);
-    setTimeout(() => this.otpStore.delete(phone), 5 * 60 * 1000); // Expire OTP after 5 min
+    this.otpStore.set(email, otp);
+    setTimeout(() => this.otpStore.delete(email), 5 * 60 * 1000); // 5 minutes
 
-    // TODO: Send OTP via SMS here using service like Twilio, Fast2SMS
-    console.log(`OTP for ${phone}: ${otp}`);
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.configService.get('GMAIL_USER'),
+        pass: this.configService.get('GMAIL_PASS'),
+      },
+    });
 
-    return { message: 'OTP sent successfully' };
+    const mailOptions = {
+      from: `"Zesty Crops" <${this.configService.get('GMAIL_USER')}>`,
+      to: email,
+      subject: 'Your OTP for Login',
+      text: `Your OTP is: ${otp}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return { message: 'OTP sent to email successfully' };
   }
 
   // ✨ 2. Verify OTP
-  async verifyOtp(phone: string, otp: string) {
-    const validOtp = this.otpStore.get(phone);
+  async verifyOtp(email: string, otp: string) {
+    const validOtp = this.otpStore.get(email);
     if (validOtp !== otp) {
       throw new UnauthorizedException('Invalid or expired OTP');
     }
 
-    let user = await this.userModel.findOne({ phone });
+    let user = await this.userModel.findOne({ email });
 
-    // Create new user if doesn't exist
     if (!user) {
-      user = new this.userModel({ phone, role: 'user' });
+      user = new this.userModel({ email, role: 'user' });
       await user.save();
     }
 
     const token = this.jwtService.sign({
       sub: user._id,
-      phone: user.phone,
+      email: user.email,
       role: user.role,
     });
 
-    const isProfileComplete = !!user.email && !!user.address;
+    const isProfileComplete = !!user.username && !!user.address;
 
     return {
       token,
@@ -127,11 +85,28 @@ export class AuthService {
     if (!user) throw new Error('User not found');
 
     user.username = dto.username;
-    user.email = dto.email;
     user.address = dto.address;
+
+    if (dto.email && dto.email !== user.email) {
+      const emailExists = await this.userModel.findOne({ email: dto.email });
+      if (emailExists) {
+        throw new ConflictException('Email already in use');
+      }
+      user.email = dto.email;
+    }
 
     await user.save();
 
-    return { message: 'Profile updated successfully', user };
+    return {
+      message: 'Profile updated successfully',
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        role: user.role,
+      },
+    };
   }
 }
