@@ -76,6 +76,7 @@ export class AuthService {
     return {
       token,
       isProfileComplete,
+      user,
     };
   }
 
