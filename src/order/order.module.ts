@@ -5,6 +5,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './schemas/order.schema';
 import { ProductService } from 'src/product/product.service';
 import { ProductModule } from 'src/product/product.module';
+import {
+  PaymentIntent,
+  PaymentIntentSchema,
+} from './schemas/payment-intent.schema';
 
 @Module({
   imports: [
@@ -14,6 +18,7 @@ import { ProductModule } from 'src/product/product.module';
         name: Order.name,
         schema: OrderSchema,
       },
+      { name: PaymentIntent.name, schema: PaymentIntentSchema },
     ]),
   ],
   providers: [OrderService],

@@ -9,14 +9,18 @@ import { Order, OrderDocument, OrderStatus } from './schemas/order.schema';
 import { Product, ProductDocument } from 'src/product/schemas/product.schema';
 import { Model, Types } from 'mongoose';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { PaymentIntent, PaymentIntentDocument } from './schemas/payment-intent.schema';
 
 @Injectable()
 export class OrderService {
+  
   constructor(
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
+      @InjectModel(PaymentIntent.name)
+  private readonly paymentIntentModel: Model<PaymentIntentDocument>,
   ) {}
 
   // Get All orders
@@ -141,4 +145,28 @@ async createOrder(createOrderDto: CreateOrderDto) {
       .populate('user')
       .populate('products.productId');
   }
+async createPaymentIntent(userId: string, amount: number) {
+  // Generate UPI QR Code (mock or real)
+  const qrUrl = `https://upi.qr.mock/${userId}-${Date.now()}`; // Replace with Razorpay/Paytm UPI link
+
+  const paymentIntent = new this.paymentIntentModel({
+    userId,
+    amount,
+    qrUrl,
+    isPaid: false,
+  });
+
+  return await paymentIntent.save();
+}
+async confirmPaymentAndCreateOrder(paymentIntentId: string, orderDto: CreateOrderDto) {
+  const intent = await this.paymentIntentModel.findById(paymentIntentId);
+  if (!intent || !intent.isPaid) {
+    throw new BadRequestException('Payment not completed');
+  }
+
+  return this.createOrder(orderDto); // your existing logic
+}
+
+
+
 }

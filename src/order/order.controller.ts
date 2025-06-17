@@ -18,7 +18,6 @@ import { OrderStatus } from './schemas/order.schema';
 import { Roles } from 'src/auth/roles-decorator';
 import { RolesGuard } from 'src/auth/roles-guards';
 import { IsIn } from 'class-validator';
-import { Types } from 'mongoose';
 
 export class UpdateOrderStatusDto {
   @IsIn(['pending', 'shipped', 'delivered', 'cancelled'])
@@ -28,66 +27,91 @@ export class UpdateOrderStatusDto {
 @Controller('order')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
-  @UseGuards(JwtAuthGuard)
-  @Roles('admin') // Only authenticated users can access these routes
+
+  // Admin: Get all orders
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Get()
   async GetAll() {
     return await this.orderService.getAllOrder();
   }
 
+  // Get order by ID
   @Get(':orderId')
   async getOrderById(@Param('orderId') orderId: string) {
     const order = await this.orderService.getOrderByID(orderId);
-    if (!order) {
-      throw new NotFoundException('order not found');
-    }
+    if (!order) throw new NotFoundException('Order not found');
     return order;
   }
 
+  // Get user orders
   @Get('user/:id')
   async getOrdersByUserId(@Param('id') userId: string) {
     const orders = await this.orderService.getOrderByUserId(userId);
-    if (!orders) {
-      throw new NotFoundException('order not found');
-    }
+    if (!orders) throw new NotFoundException('Orders not found');
     return orders;
   }
-  // POST /order/:userId
-  @Post()
-  async createOrder(@Body() createOrderDto: CreateOrderDto) {
-    const order = await this.orderService.createOrder(createOrderDto);
+
+  // ❗ Step 1: Initiate payment, generate QR code
+  @Post('initiate-payment')
+  @UseGuards(JwtAuthGuard)
+  async initiatePayment(@Req() req: any, @Body() createOrderDto: CreateOrderDto) {
+    const userId = req.user.userId;
+    if (!userId) throw new UnauthorizedException('User not authenticated');
+
+    let total = 0;
+    for (const item of createOrderDto.products) {
+      const product = await this.orderService['productModel'].findById(item.productId);
+      const variant = product?.variants.find((v) => v.label === item.variantLabel);
+      if (!variant) throw new NotFoundException('Invalid product or variant');
+      total += variant.price * item.quantity;
+    }
+
+    const intent = await this.orderService.createPaymentIntent(userId, total);
+
     return {
-      message: 'Order created successfully',
+      message: 'Scan the QR to pay',
+      paymentIntentId: intent._id,
+      amount: total,
+      qrUrl: intent.qrUrl,
+    };
+  }
+
+  // ❗ Step 2: Confirm payment (after user paid via UPI QR)
+  @Post('confirm/:paymentIntentId')
+  @UseGuards(JwtAuthGuard)
+  async confirmPayment(
+    @Param('paymentIntentId') paymentIntentId: string,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
+    const order = await this.orderService.confirmPaymentAndCreateOrder(
+      paymentIntentId,
+      createOrderDto,
+    );
+    return {
+      message: 'Payment confirmed. Order created.',
       order,
     };
   }
 
-  // cancel order
+  // Cancel order
   @Delete('cancel/:id')
   @UseGuards(JwtAuthGuard)
   async cancelOrder(@Param('id') orderId: string, @Req() req: any) {
-    console.log('req.user:', req.user); // for debugging
-    const userId = req.user.userId; // <-- Use userId here, not id
-    if (!userId) {
-      throw new UnauthorizedException('User not authenticated');
-    }
+    const userId = req.user.userId;
+    if (!userId) throw new UnauthorizedException('User not authenticated');
     return this.orderService.cancelOrder(orderId, userId);
   }
 
-  //status
-  @UseGuards(JwtAuthGuard, RolesGuard)
- 
+  // Update status
   @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateOrderStatusDto,
-  ) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
     return this.orderService.updateOrderStatus(id, dto.status);
   }
 
   @Get('status/:status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles('admin')
   getOrdersByStatus(@Param('status') status: OrderStatus) {
     return this.orderService.getOrdersByStatus(status);
   }
