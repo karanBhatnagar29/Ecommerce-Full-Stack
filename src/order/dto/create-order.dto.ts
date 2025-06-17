@@ -1,55 +1,101 @@
-// src/order/dto/create-order.dto.ts
 import {
-  IsArray,
+  IsString,
   IsNotEmpty,
+  IsArray,
+  ValidateNested,
   IsNumber,
   IsOptional,
-  IsString,
-  ValidateNested,
+  IsEnum,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class OrderProduct {
-  @IsNotEmpty()
+class OrderProductDto {
   @IsString()
+  @IsNotEmpty()
   productId: string;
 
   @IsNumber()
   quantity: number;
 
-  @IsNotEmpty()
   @IsString()
   variantLabel: string;
 }
 
-class ShippingDetailsDto {
+class ShippingInfoDto {
   @IsString()
   @IsNotEmpty()
   shippingAddress: string;
 
   @IsString()
-  @IsOptional()
-  courier?: string;
+  @IsNotEmpty()
+  phone: string;
 
   @IsString()
   @IsOptional()
-  trackingNumber?: string;
+  alternatePhone?: string;
 
+  @IsString()
   @IsOptional()
-  estimatedDeliveryDate?: Date;
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @IsString()
+  @IsOptional()
+  pincode?: string;
+
+  @IsString()
+  @IsOptional()
+  deliveryInstructions?: string;
+}
+
+enum PaymentMethod {
+  COD = 'COD',
+  UPI = 'UPI',
+  CARD = 'CARD',
+  NET_BANKING = 'NET_BANKING',
+}
+
+class PaymentInfoDto {
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod;
+
+  @IsString()
+  @IsOptional()
+  transactionId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isPaid?: boolean;
 }
 
 export class CreateOrderDto {
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => OrderProduct)
-  products: OrderProduct[];
-
   @IsString()
   @IsNotEmpty()
-  userId: string;  // User creating order
+  userId: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrderProductDto)
+  products: OrderProductDto[];
 
   @ValidateNested()
-  @Type(() => ShippingDetailsDto)
-  shippingDetails: ShippingDetailsDto;
+  @Type(() => ShippingInfoDto)
+  shippingInfo: ShippingInfoDto;
+
+  @ValidateNested()
+  @Type(() => PaymentInfoDto)
+  @IsOptional()
+  paymentInfo?: PaymentInfoDto;
+
+  @IsString()
+  @IsOptional()
+  couponCode?: string;
+
+  @IsString()
+  @IsOptional()
+  orderNotes?: string;
 }

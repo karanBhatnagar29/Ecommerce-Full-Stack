@@ -50,6 +50,7 @@ export class Order {
   })
   status: OrderStatus;
 
+  // ✅ Existing shippingDetails (keep as-is)
   @Prop({
     type: {
       shippingAddress: { type: String },
@@ -65,6 +66,52 @@ export class Order {
     trackingNumber?: string;
     estimatedDeliveryDate?: Date;
   };
+
+  // ✅ Newly added shippingInfo
+  @Prop({
+    type: {
+      shippingAddress: String,
+      phone: String,
+      alternatePhone: String,
+      city: String,
+      state: String,
+      pincode: String,
+      deliveryInstructions: String,
+    },
+    required: false,
+  })
+  shippingInfo?: {
+    shippingAddress?: string;
+    phone?: string;
+    alternatePhone?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    deliveryInstructions?: string;
+  };
+
+  // ✅ Newly added paymentInfo
+  @Prop({
+    type: {
+      paymentMethod: String,
+      transactionId: String,
+      isPaid: Boolean,
+    },
+    required: false,
+  })
+  paymentInfo?: {
+    paymentMethod: string;
+    transactionId?: string;
+    isPaid?: boolean;
+  };
+
+  // ✅ Newly added couponCode
+  @Prop({ type: String, required: false })
+  couponCode?: string;
+
+  // ✅ Newly added orderNotes
+  @Prop({ type: String, required: false })
+  orderNotes?: string;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
