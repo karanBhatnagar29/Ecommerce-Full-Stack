@@ -65,11 +65,16 @@ export class AuthService {
       await user.save();
     }
 
-    const token = this.jwtService.sign({
-      sub: user._id,
-      email: user.email,
-      role: user.role,
-    });
+    const token = this.jwtService.sign(
+      {
+        sub: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      {
+        expiresIn: '7d',
+      },
+    );
 
     const isProfileComplete = !!user.username && !!user.address;
 
