@@ -9,18 +9,26 @@ import { Order, OrderDocument, OrderStatus } from './schemas/order.schema';
 import { Product, ProductDocument } from 'src/product/schemas/product.schema';
 import { Model, Types } from 'mongoose';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { PaymentIntent, PaymentIntentDocument } from './schemas/payment-intent.schema';
+import {
+  PaymentIntent,
+  PaymentIntentDocument,
+} from './schemas/payment-intent.schema';
+import {
+  BuyNowSession,
+  BuyNowSessionDocument,
+} from './schemas/buy-now-session.schema';
 
 @Injectable()
 export class OrderService {
-  
   constructor(
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
-      @InjectModel(PaymentIntent.name)
-  private readonly paymentIntentModel: Model<PaymentIntentDocument>,
+    @InjectModel(PaymentIntent.name)
+    private readonly paymentIntentModel: Model<PaymentIntentDocument>,
+    @InjectModel(BuyNowSession.name)
+    private readonly buyNowSessionModel: Model<BuyNowSessionDocument>,
   ) {}
 
   // Get All orders
@@ -54,56 +62,55 @@ export class OrderService {
   }
 
   // Create order
-async createOrder(createOrderDto: CreateOrderDto) {
-  const {
-    userId,
-    products,
-    shippingInfo,
-    paymentInfo,
-    couponCode,
-    orderNotes,
-  } = createOrderDto;
+  async createOrder(createOrderDto: CreateOrderDto) {
+    const {
+      userId,
+      products,
+      shippingInfo,
+      paymentInfo,
+      couponCode,
+      orderNotes,
+    } = createOrderDto;
 
-  let totalPrice = 0;
+    let totalPrice = 0;
 
-  for (const item of products) {
-    const product = await this.productModel.findById(item.productId).exec();
-    if (!product) {
-      throw new NotFoundException(
-        `Product with ID ${item.productId} not found`,
+    for (const item of products) {
+      const product = await this.productModel.findById(item.productId).exec();
+      if (!product) {
+        throw new NotFoundException(
+          `Product with ID ${item.productId} not found`,
+        );
+      }
+
+      const variant = product.variants.find(
+        (v) => v.label === item.variantLabel,
       );
+      if (!variant) {
+        throw new NotFoundException(
+          `Variant "${item.variantLabel}" not found for product ${product.name}`,
+        );
+      }
+
+      totalPrice += variant.price * item.quantity;
     }
 
-    const variant = product.variants.find(
-      (v) => v.label === item.variantLabel,
-    );
-    if (!variant) {
-      throw new NotFoundException(
-        `Variant "${item.variantLabel}" not found for product ${product.name}`,
-      );
-    }
+    const order = new this.orderModel({
+      user: new Types.ObjectId(userId),
+      products: products.map((p) => ({
+        productId: new Types.ObjectId(p.productId),
+        quantity: p.quantity,
+        variantLabel: p.variantLabel,
+      })),
+      totalPrice,
+      status: OrderStatus.Pending,
+      shippingInfo,
+      paymentInfo,
+      couponCode,
+      orderNotes,
+    });
 
-    totalPrice += variant.price * item.quantity;
+    return order.save();
   }
-
-  const order = new this.orderModel({
-    user: new Types.ObjectId(userId),
-    products: products.map((p) => ({
-      productId: new Types.ObjectId(p.productId),
-      quantity: p.quantity,
-      variantLabel: p.variantLabel,
-    })),
-    totalPrice,
-    status: OrderStatus.Pending,
-    shippingInfo,
-    paymentInfo,
-    couponCode,
-    orderNotes,
-  });
-
-  return order.save();
-}
-
 
   // cancel order
   async cancelOrder(orderId: string, userId: string) {
@@ -145,28 +152,48 @@ async createOrder(createOrderDto: CreateOrderDto) {
       .populate('user')
       .populate('products.productId');
   }
-async createPaymentIntent(userId: string, amount: number) {
-  // Generate UPI QR Code (mock or real)
-  const qrUrl = `https://upi.qr.mock/${userId}-${Date.now()}`; // Replace with Razorpay/Paytm UPI link
+  async createPaymentIntent(userId: string, amount: number) {
+    // Generate UPI QR Code (mock or real)
+    const qrUrl = `https://upi.qr.mock/${userId}-${Date.now()}`; // Replace with Razorpay/Paytm UPI link
 
-  const paymentIntent = new this.paymentIntentModel({
+    const paymentIntent = new this.paymentIntentModel({
+      userId,
+      amount,
+      qrUrl,
+      isPaid: false,
+    });
+
+    return await paymentIntent.save();
+  }
+  async confirmPaymentAndCreateOrder(
+    paymentIntentId: string,
+    orderDto: CreateOrderDto,
+  ) {
+    const intent = await this.paymentIntentModel.findById(paymentIntentId);
+    if (!intent || !intent.isPaid) {
+      throw new BadRequestException('Payment not completed');
+    }
+
+    return this.createOrder(orderDto); // your existing logic
+  }
+  // OrderService
+
+async createBuyNowSession(userId: string, productId: string, variantLabel: string, quantity: number = 1) {
+  // delete old session
+  await this.buyNowSessionModel.deleteMany({ userId });
+
+  const session = new this.buyNowSessionModel({
     userId,
-    amount,
-    qrUrl,
-    isPaid: false,
+    productId,
+    variantLabel,
+    quantity,
   });
 
-  return await paymentIntent.save();
-}
-async confirmPaymentAndCreateOrder(paymentIntentId: string, orderDto: CreateOrderDto) {
-  const intent = await this.paymentIntentModel.findById(paymentIntentId);
-  if (!intent || !intent.isPaid) {
-    throw new BadRequestException('Payment not completed');
-  }
-
-  return this.createOrder(orderDto); // your existing logic
+  return await session.save();
 }
 
-
+async getBuyNowSession(userId: string) {
+  return this.buyNowSessionModel.findOne({ userId });
+}
 
 }

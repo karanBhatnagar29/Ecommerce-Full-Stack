@@ -9,6 +9,10 @@ import {
   PaymentIntent,
   PaymentIntentSchema,
 } from './schemas/payment-intent.schema';
+import {
+  BuyNowSession,
+  BuyNowSessionSchema,
+} from './schemas/buy-now-session.schema';
 
 @Module({
   imports: [
@@ -19,6 +23,10 @@ import {
         schema: OrderSchema,
       },
       { name: PaymentIntent.name, schema: PaymentIntentSchema },
+      {
+        name: BuyNowSession.name,
+        schema: BuyNowSessionSchema,
+      },
     ]),
   ],
   providers: [OrderService],

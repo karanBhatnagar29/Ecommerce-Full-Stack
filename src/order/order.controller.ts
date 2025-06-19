@@ -55,14 +55,21 @@ export class OrderController {
   // ❗ Step 1: Initiate payment, generate QR code
   @Post('initiate-payment')
   @UseGuards(JwtAuthGuard)
-  async initiatePayment(@Req() req: any, @Body() createOrderDto: CreateOrderDto) {
+  async initiatePayment(
+    @Req() req: any,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
     const userId = req.user.userId;
     if (!userId) throw new UnauthorizedException('User not authenticated');
 
     let total = 0;
     for (const item of createOrderDto.products) {
-      const product = await this.orderService['productModel'].findById(item.productId);
-      const variant = product?.variants.find((v) => v.label === item.variantLabel);
+      const product = await this.orderService['productModel'].findById(
+        item.productId,
+      );
+      const variant = product?.variants.find(
+        (v) => v.label === item.variantLabel,
+      );
       if (!variant) throw new NotFoundException('Invalid product or variant');
       total += variant.price * item.quantity;
     }
@@ -105,14 +112,38 @@ export class OrderController {
 
   // Update status
   @Patch(':id/status')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+  @UseGuards(JwtAuthGuard)
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
     return this.orderService.updateOrderStatus(id, dto.status);
   }
 
   @Get('status/:status')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard)
   getOrdersByStatus(@Param('status') status: OrderStatus) {
     return this.orderService.getOrdersByStatus(status);
+  }
+  // POST /buy-now-session
+  @Post('buy-now-session')
+  @UseGuards(JwtAuthGuard)
+  createBuyNow(@Req() req, @Body() body) {
+    const userId = req.user._id;
+    const { productId, variantLabel, quantity } = body;
+    return this.orderService.createBuyNowSession(
+      userId,
+      productId,
+      variantLabel,
+      quantity,
+    );
+  }
+
+  // GET /buy-now-session
+  @Get('buy-now-session')
+  @UseGuards(JwtAuthGuard)
+  getBuyNow(@Req() req) {
+    const userId = req.user._id;
+    return this.orderService.getBuyNowSession(userId);
   }
 }
