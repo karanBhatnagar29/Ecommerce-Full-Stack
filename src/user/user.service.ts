@@ -15,11 +15,19 @@ export class UserService {
   async getAllUsers() {
     return await this.userModel.find();
   }
-
   //get user by id
   async getUserById(id: string) {
-    const user = await this.userModel.findById(id);
-    return user;
+    const user = await this.userModel.findById(id).lean();
+    if (!user) return null;
+
+    return {
+      _id: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      role: user.role,
+    };
   }
 
   // update user
