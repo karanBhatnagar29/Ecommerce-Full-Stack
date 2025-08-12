@@ -52,7 +52,8 @@ export class AdminService {
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const payload = { sub: user._id, role: user.role };
+    // ✅ Use userId instead of sub
+    const payload = { userId: user._id, role: user.role };
     const token = this.jwtService.sign(payload);
 
     return {
