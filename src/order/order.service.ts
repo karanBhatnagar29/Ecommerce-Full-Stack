@@ -33,6 +33,7 @@ export class OrderService {
 
   // Get All orders
   async getAllOrder() {
+    console.log('Inside order service getAllOrder');
     return await this.orderModel
       .find()
       .populate('user')
@@ -178,22 +179,26 @@ export class OrderService {
   }
   // OrderService
 
-async createBuyNowSession(userId: string, productId: string, variantLabel: string, quantity: number = 1) {
-  // delete old session
-  await this.buyNowSessionModel.deleteMany({ userId });
+  async createBuyNowSession(
+    userId: string,
+    productId: string,
+    variantLabel: string,
+    quantity: number = 1,
+  ) {
+    // delete old session
+    await this.buyNowSessionModel.deleteMany({ userId });
 
-  const session = new this.buyNowSessionModel({
-    userId,
-    productId,
-    variantLabel,
-    quantity,
-  });
+    const session = new this.buyNowSessionModel({
+      userId,
+      productId,
+      variantLabel,
+      quantity,
+    });
 
-  return await session.save();
-}
+    return await session.save();
+  }
 
-async getBuyNowSession(userId: string) {
-  return this.buyNowSessionModel.findOne({ userId });
-}
-
+  async getBuyNowSession(userId: string) {
+    return this.buyNowSessionModel.findOne({ userId });
+  }
 }
