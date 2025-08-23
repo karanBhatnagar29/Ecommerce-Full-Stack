@@ -12,7 +12,11 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: ['http://54.93.193.153:3000', 'http://localhost:3000'],
+    origin: [
+      'http://63.178.76.247:3001',
+      'http://localhost:3000',
+      'http://63.178.76.247:3001',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   });
