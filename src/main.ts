@@ -18,6 +18,8 @@ async function bootstrap() {
       'http://63.178.76.247:3002',
       'http://www.zestycrops.com',
       'http://zestycrops.com',
+       'https://www.zestycrops.com',
+      'https://zestycrops.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
