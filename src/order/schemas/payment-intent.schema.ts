@@ -37,12 +37,17 @@ export class PaymentIntent {
 
   // Razorpay-specific
   @Prop()
-  razorpayOrderId: string; // returned when creating order in Razorpay
+  razorpayOrderId: string;
+
+  @Prop()
+  razorpayPaymentId?: string; // ✅ add this
+
+  @Prop()
+  razorpaySignature?: string; // ✅ add this
 
   @Prop({ default: false })
   isPaid: boolean;
 
-  // store the order draft until payment is confirmed
   @Prop({ type: Object })
   orderDraft: any;
 }

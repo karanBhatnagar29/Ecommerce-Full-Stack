@@ -242,7 +242,7 @@ export class OrderController {
       razorpay_payment_id: string;
       razorpay_signature: string;
       paymentIntentId: string;
-      order: CreateOrderDto; // 👈 include order details
+      order: CreateOrderDto;
     },
   ) {
     const {
@@ -257,6 +257,8 @@ export class OrderController {
     if (!secret) {
       throw new BadRequestException('Razorpay secret key is not configured');
     }
+
+    // Step 1: Verify signature
     const hmac = crypto
       .createHmac('sha256', secret)
       .update(razorpay_order_id + '|' + razorpay_payment_id)
@@ -266,6 +268,16 @@ export class OrderController {
       throw new BadRequestException('Invalid payment signature');
     }
 
+    // Step 2: Mark payment intent as paid
+    const intent =
+      await this.orderService['paymentIntentModel'].findById(paymentIntentId);
+    if (!intent) throw new BadRequestException('Payment intent not found');
+
+    intent.isPaid = true;
+    intent.razorpayPaymentId = razorpay_payment_id;
+    await intent.save();
+
+    // Step 3: Create order
     return this.orderService.confirmPaymentAndCreateOrder(
       paymentIntentId,
       order,
