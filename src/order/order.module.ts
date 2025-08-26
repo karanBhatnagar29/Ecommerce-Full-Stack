@@ -13,6 +13,7 @@ import {
   BuyNowSession,
   BuyNowSessionSchema,
 } from './schemas/buy-now-session.schema';
+import { RazorpayProvider } from './razorpay.provider';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import {
       },
     ]),
   ],
-  providers: [OrderService],
+  providers: [OrderService, RazorpayProvider],
   controllers: [OrderController],
 })
 export class OrderModule {}

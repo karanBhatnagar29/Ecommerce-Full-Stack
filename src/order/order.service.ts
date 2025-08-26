@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import {
   BuyNowSession,
   BuyNowSessionDocument,
 } from './schemas/buy-now-session.schema';
+import Razorpay from 'razorpay';
 
 @Injectable()
 export class OrderService {
@@ -29,6 +31,8 @@ export class OrderService {
     private readonly paymentIntentModel: Model<PaymentIntentDocument>,
     @InjectModel(BuyNowSession.name)
     private readonly buyNowSessionModel: Model<BuyNowSessionDocument>,
+    @Inject('RAZORPAY_CLIENT')
+    private readonly razorpayClient: Razorpay, // 👈 now injected
   ) {}
 
   // Get All orders
@@ -153,19 +157,32 @@ export class OrderService {
       .populate('user')
       .populate('products.productId');
   }
-  async createPaymentIntent(userId: string, amount: number) {
-    // Generate UPI QR Code (mock or real)
-    const qrUrl = `https://upi.qr.mock/${userId}-${Date.now()}`; // Replace with Razorpay/Paytm UPI link
+  async createPaymentIntent(userId: string, amount: number, orderDraft: any) {
+    // Convert amount to paise (Razorpay expects smallest unit)
+    const options = {
+      amount: amount * 100,
+      currency: 'INR',
+      receipt: `rcpt_${Date.now()}`,
+    };
 
+    // Get razorpay client
+    const razorpay = this.razorpayClient;
+
+    const razorpayOrder = await razorpay.orders.create(options);
+
+    // Save in DB
     const paymentIntent = new this.paymentIntentModel({
       userId,
       amount,
-      qrUrl,
+      currency: 'INR',
+      razorpayOrderId: razorpayOrder.id,
+      orderDraft,
       isPaid: false,
     });
 
-    return await paymentIntent.save();
+    return paymentIntent.save();
   }
+
   async confirmPaymentAndCreateOrder(
     paymentIntentId: string,
     orderDto: CreateOrderDto,
