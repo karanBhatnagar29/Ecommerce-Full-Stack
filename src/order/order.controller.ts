@@ -228,7 +228,20 @@ export class OrderController {
       total += variant.price * item.quantity;
     }
 
-    return this.orderService.createPaymentIntent(userId, total, createOrderDto);
+    // 👇 Service se dono objects return karao
+    const { paymentIntent, razorpayOrder } =
+      await this.orderService.createPaymentIntent(
+        userId,
+        total,
+        createOrderDto,
+      );
+
+    // 👇 Controller ka response modify karo
+    return {
+      paymentIntentId: paymentIntent._id, // ✅ yahi frontend ko chahiye
+      razorpayOrderId: razorpayOrder.id,
+      amount: total,
+    };
   }
 
   // Step 2: Verify signature + create actual order

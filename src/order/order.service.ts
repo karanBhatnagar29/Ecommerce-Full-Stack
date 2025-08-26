@@ -157,30 +157,31 @@ export class OrderService {
       .populate('user')
       .populate('products.productId');
   }
-  async createPaymentIntent(userId: string, amount: number, orderDraft: any) {
-    // Convert amount to paise (Razorpay expects smallest unit)
-    const options = {
+  async createPaymentIntent(
+    userId: string,
+    amount: number,
+    createOrderDto: CreateOrderDto,
+  ) {
+    // 1. Razorpay order banao
+    const razorpayOrder = await this.razorpayClient.orders.create({
       amount: amount * 100,
       currency: 'INR',
-      receipt: `rcpt_${Date.now()}`,
-    };
-
-    // Get razorpay client
-    const razorpay = this.razorpayClient;
-
-    const razorpayOrder = await razorpay.orders.create(options);
-
-    // Save in DB
-    const paymentIntent = new this.paymentIntentModel({
-      userId,
-      amount,
-      currency: 'INR',
-      razorpayOrderId: razorpayOrder.id,
-      orderDraft,
-      isPaid: false,
+      payment_capture: true, // ✅ boolean
     });
 
-    return paymentIntent.save();
+    // 2. MongoDB me PaymentIntent save karo
+    const paymentIntent = new this.paymentIntentModel({
+      userId,
+      products: createOrderDto.products,
+      amount,
+      razorpayOrderId: razorpayOrder.id,
+      status: 'pending',
+    });
+
+    await paymentIntent.save();
+
+    // 3. Dono objects ek saath return karo
+    return { paymentIntent, razorpayOrder };
   }
 
   async confirmPaymentAndCreateOrder(
