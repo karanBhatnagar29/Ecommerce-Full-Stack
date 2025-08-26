@@ -258,43 +258,65 @@ export class OrderController {
       order: CreateOrderDto;
     },
   ) {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      paymentIntentId,
-      order,
-    } = body;
+    try {
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        paymentIntentId,
+        order,
+      } = body;
 
-    const secret = process.env.RAZORPAY_KEY_SECRET;
-    if (!secret) {
-      throw new BadRequestException('Razorpay secret key is not configured');
+      if (
+        !razorpay_order_id ||
+        !razorpay_payment_id ||
+        !razorpay_signature ||
+        !paymentIntentId
+      ) {
+        throw new BadRequestException('Missing required payment parameters');
+      }
+
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!secret) {
+        throw new BadRequestException('Razorpay secret key is not configured');
+      }
+
+      // Step 1: Verify Razorpay signature
+      const generatedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex');
+
+      if (generatedSignature !== razorpay_signature) {
+        throw new BadRequestException('Invalid payment signature');
+      }
+
+      // Step 2: Fetch PaymentIntent
+      const intent =
+        await this.orderService['paymentIntentModel'].findById(paymentIntentId);
+      if (!intent) throw new BadRequestException('Payment intent not found');
+
+      // Step 3: Mark payment as paid
+      intent.isPaid = true;
+      intent.razorpayPaymentId = razorpay_payment_id;
+      await intent.save();
+
+      // Step 4: Create actual order
+      const createdOrder = await this.orderService.confirmPaymentAndCreateOrder(
+        paymentIntentId,
+        order,
+      );
+
+      return {
+        message: 'Payment verified and order created successfully',
+        order: createdOrder,
+      };
+    } catch (error) {
+      console.error('verify-payment error:', error);
+      throw new BadRequestException(
+        error.message || 'Payment verification failed',
+      );
     }
-
-    // Step 1: Verify signature
-    const hmac = crypto
-      .createHmac('sha256', secret)
-      .update(razorpay_order_id + '|' + razorpay_payment_id)
-      .digest('hex');
-
-    if (hmac !== razorpay_signature) {
-      throw new BadRequestException('Invalid payment signature');
-    }
-
-    // Step 2: Mark payment intent as paid
-    const intent =
-      await this.orderService['paymentIntentModel'].findById(paymentIntentId);
-    if (!intent) throw new BadRequestException('Payment intent not found');
-
-    intent.isPaid = true;
-    intent.razorpayPaymentId = razorpay_payment_id;
-    await intent.save();
-
-    // Step 3: Create order
-    return this.orderService.confirmPaymentAndCreateOrder(
-      paymentIntentId,
-      order,
-    );
   }
 
   // ========== OTHER EXISTING ENDPOINTS ==========
