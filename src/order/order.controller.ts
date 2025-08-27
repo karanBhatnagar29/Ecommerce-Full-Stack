@@ -186,8 +186,8 @@ export class OrderController {
 
   @Roles('admin')
   @Get()
-  async GetAll(@Req() req) {
-    return await this.orderService.getAllOrder();
+  async GetAll() {
+    return this.orderService.getAllOrder();
   }
 
   @Get(':orderId')
@@ -213,7 +213,7 @@ export class OrderController {
     @Req() req: any,
     @Body() createOrderDto: CreateOrderDto,
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user._id;
     if (!userId) throw new UnauthorizedException('User not authenticated');
 
     let total = 0;
@@ -228,17 +228,15 @@ export class OrderController {
       total += variant.price * item.quantity;
     }
 
-    // 👇 Service se dono objects return karao
     const { paymentIntent, razorpayOrder } =
       await this.orderService.createPaymentIntent(
-        userId,
+        userId.toString(),
         total,
         createOrderDto,
       );
 
-    // 👇 Controller ka response modify karo
     return {
-      paymentIntentId: paymentIntent._id, // ✅ yahi frontend ko chahiye
+      paymentIntentId: paymentIntent._id,
       razorpayOrderId: razorpayOrder.id,
       amount: total,
     };
@@ -302,7 +300,9 @@ export class OrderController {
       await intent.save();
 
       // Step 4: Create actual order
+      const userId = req.user.userId || req.user._id;
       const createdOrder = await this.orderService.confirmPaymentAndCreateOrder(
+        userId.toString(),
         paymentIntentId,
         order,
       );
@@ -324,9 +324,9 @@ export class OrderController {
   @Delete('cancel/:id')
   @UseGuards(JwtAuthGuard)
   async cancelOrder(@Param('id') orderId: string, @Req() req: any) {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user._id;
     if (!userId) throw new UnauthorizedException('User not authenticated');
-    return this.orderService.cancelOrder(orderId, userId);
+    return this.orderService.cancelOrder(orderId, userId.toString());
   }
 
   @Patch(':id/status')
@@ -347,10 +347,10 @@ export class OrderController {
   @Post('buy-now-session')
   @UseGuards(JwtAuthGuard)
   createBuyNow(@Req() req, @Body() body) {
-    const userId = req.user._id;
+    const userId = req.user.userId || req.user._id;
     const { productId, variantLabel, quantity } = body;
     return this.orderService.createBuyNowSession(
-      userId,
+      userId.toString(),
       productId,
       variantLabel,
       quantity,
@@ -360,7 +360,7 @@ export class OrderController {
   @Get('buy-now-session')
   @UseGuards(JwtAuthGuard)
   getBuyNow(@Req() req) {
-    const userId = req.user._id;
-    return this.orderService.getBuyNowSession(userId);
+    const userId = req.user.userId || req.user._id;
+    return this.orderService.getBuyNowSession(userId.toString());
   }
 }

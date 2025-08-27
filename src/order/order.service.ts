@@ -1,3 +1,5 @@
+// order.service.ts
+
 import {
   BadRequestException,
   ForbiddenException,
@@ -32,16 +34,12 @@ export class OrderService {
     @InjectModel(BuyNowSession.name)
     private readonly buyNowSessionModel: Model<BuyNowSessionDocument>,
     @Inject('RAZORPAY_CLIENT')
-    private readonly razorpayClient: Razorpay, // 👈 now injected
+    private readonly razorpayClient: Razorpay,
   ) {}
 
   // Get All orders
   async getAllOrder() {
-    console.log('Inside order service getAllOrder');
-    return await this.orderModel
-      .find()
-      .populate('user')
-      .populate('products.productId');
+    return this.orderModel.find().populate('user').populate('products.productId');
   }
 
   // Get order by ID
@@ -51,31 +49,22 @@ export class OrderService {
       .populate('products.productId')
       .populate('user');
 
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
+    if (!order) throw new NotFoundException('Order not found');
     return order;
   }
 
   // Get orders by user ID
   async getOrderByUserId(id: string) {
-    return await this.orderModel
+    return this.orderModel
       .find({ user: id })
       .populate('products.productId')
       .populate('user');
   }
 
-  // Create order
-  async createOrder(createOrderDto: CreateOrderDto) {
-    const {
-      userId,
-      products,
-      shippingInfo,
-      paymentInfo,
-      couponCode,
-      orderNotes,
-    } = createOrderDto;
+  // Create order (userId comes separately)
+  async createOrder(userId: string, createOrderDto: CreateOrderDto) {
+    const { products, shippingInfo, paymentInfo, couponCode, orderNotes } =
+      createOrderDto;
 
     let totalPrice = 0;
 
@@ -117,14 +106,11 @@ export class OrderService {
     return order.save();
   }
 
-  // cancel order
+  // Cancel order
   async cancelOrder(orderId: string, userId: string) {
     const order = await this.orderModel.findById(orderId);
-    console.log('Order fetched:', order);
     if (!order) throw new NotFoundException('Order not found');
-    console.log('Order user:', order.user);
 
-    // Defensive check to avoid undefined
     if (!order.user || order.user.toString() !== userId.toString()) {
       throw new ForbiddenException('You are not allowed to cancel this order');
     }
@@ -137,15 +123,10 @@ export class OrderService {
     return await order.save();
   }
 
-  // order status update
+  // Update order status (for admin)
   async updateOrderStatus(orderId: string, status: OrderStatus) {
     const order = await this.orderModel.findById(orderId);
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    // Optional: add validation logic to prevent invalid status transitions
-    // e.g. no going back from Delivered to Packed etc.
+    if (!order) throw new NotFoundException('Order not found');
 
     order.status = status;
     return await order.save();
@@ -157,19 +138,19 @@ export class OrderService {
       .populate('user')
       .populate('products.productId');
   }
+
+  // Payment intent
   async createPaymentIntent(
     userId: string,
     amount: number,
     createOrderDto: CreateOrderDto,
   ) {
-    // 1. Razorpay order banao
     const razorpayOrder = await this.razorpayClient.orders.create({
-      amount: amount * 100,
+      amount: amount * 100, // Razorpay expects paise
       currency: 'INR',
-      payment_capture: true, // ✅ boolean
+      payment_capture: true,
     });
 
-    // 2. MongoDB me PaymentIntent save karo
     const paymentIntent = new this.paymentIntentModel({
       userId,
       products: createOrderDto.products,
@@ -180,11 +161,11 @@ export class OrderService {
 
     await paymentIntent.save();
 
-    // 3. Dono objects ek saath return karo
     return { paymentIntent, razorpayOrder };
   }
 
   async confirmPaymentAndCreateOrder(
+    userId: string,
     paymentIntentId: string,
     orderDto: CreateOrderDto,
   ) {
@@ -193,17 +174,16 @@ export class OrderService {
       throw new BadRequestException('Payment not completed');
     }
 
-    return this.createOrder(orderDto); // your existing logic
+    return this.createOrder(userId, orderDto);
   }
-  // OrderService
 
+  // Buy Now session
   async createBuyNowSession(
     userId: string,
     productId: string,
     variantLabel: string,
     quantity: number = 1,
   ) {
-    // delete old session
     await this.buyNowSessionModel.deleteMany({ userId });
 
     const session = new this.buyNowSessionModel({
@@ -213,7 +193,7 @@ export class OrderService {
       quantity,
     });
 
-    return await session.save();
+    return session.save();
   }
 
   async getBuyNowSession(userId: string) {

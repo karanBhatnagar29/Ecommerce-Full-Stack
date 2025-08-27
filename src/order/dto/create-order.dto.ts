@@ -73,9 +73,9 @@ class PaymentInfoDto {
 }
 
 export class CreateOrderDto {
-  @IsString()
-  @IsNotEmpty()
-  userId: string;
+  // @IsString()
+  // @IsNotEmpty()
+  // userId: string;
 
   @IsArray()
   @ValidateNested({ each: true })
