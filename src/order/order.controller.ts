@@ -209,37 +209,28 @@ export class OrderController {
   // Step 1: Create Razorpay Order
   @Post('create-payment-intent')
   @UseGuards(JwtAuthGuard)
-  async createPaymentIntent(
-    @Req() req: any,
-    @Body() createOrderDto: CreateOrderDto,
-  ) {
+  async createPaymentIntent(@Req() req: any, @Body() dto: CreateOrderDto) {
     const userId = req.user.userId || req.user._id;
     if (!userId) throw new UnauthorizedException('User not authenticated');
 
-    let total = 0;
-    for (const item of createOrderDto.products) {
-      const product = await this.orderService['productModel'].findById(
-        item.productId,
+    try {
+      const { paymentIntent, razorpayOrder, amount } =
+        await this.orderService.createPaymentIntentFromDto(
+          userId.toString(),
+          dto,
+        );
+
+      return {
+        paymentIntentId: paymentIntent._id,
+        razorpayOrderId: razorpayOrder.id,
+        amount,
+      };
+    } catch (err) {
+      console.error('create-payment-intent failed:', err);
+      throw new BadRequestException(
+        `Failed to create payment intent: ${err.message || 'Unknown error'}`,
       );
-      const variant = product?.variants.find(
-        (v) => v.label === item.variantLabel,
-      );
-      if (!variant) throw new NotFoundException('Invalid product or variant');
-      total += variant.price * item.quantity;
     }
-
-    const { paymentIntent, razorpayOrder } =
-      await this.orderService.createPaymentIntent(
-        userId.toString(),
-        total,
-        createOrderDto,
-      );
-
-    return {
-      paymentIntentId: paymentIntent._id,
-      razorpayOrderId: razorpayOrder.id,
-      amount: total,
-    };
   }
 
   // Step 2: Verify signature + create actual order

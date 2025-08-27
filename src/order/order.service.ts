@@ -148,9 +148,13 @@ export class OrderService {
     amount: number,
     createOrderDto: CreateOrderDto,
   ) {
+    if (!amount || amount <= 0) {
+      throw new BadRequestException('Invalid order amount');
+    }
+
     try {
       const razorpayOrder = await this.razorpayClient.orders.create({
-        amount: amount * 100, // ✅ paise
+        amount: amount * 100, // in paise
         currency: 'INR',
         payment_capture: true,
       });
@@ -167,7 +171,54 @@ export class OrderService {
 
       return { paymentIntent, razorpayOrder };
     } catch (err) {
-      console.error('Razorpay error:', err); // ✅ helps debug
+      console.error('Razorpay order creation failed:', err);
+      throw new BadRequestException(
+        `Failed to create payment intent: ${err.message}`,
+      );
+    }
+  }
+
+  async createPaymentIntentFromDto(userId: string, dto: CreateOrderDto) {
+    let total = 0;
+
+    for (const item of dto.products) {
+      const product = await this.productModel.findById(item.productId);
+      if (!product) {
+        throw new NotFoundException(`Product ${item.productId} not found`);
+      }
+      const variant = product.variants.find(
+        (v) => v.label === item.variantLabel,
+      );
+      if (!variant) {
+        throw new NotFoundException(
+          `Variant "${item.variantLabel}" not found for product ${product.name}`,
+        );
+      }
+      total += variant.price * item.quantity;
+    }
+
+    if (total <= 0) throw new BadRequestException('Invalid order amount');
+
+    try {
+      const razorpayOrder = await this.razorpayClient.orders.create({
+        amount: total * 100,
+        currency: 'INR',
+        payment_capture: true,
+      });
+
+      const paymentIntent = new this.paymentIntentModel({
+        userId,
+        products: dto.products,
+        amount: total,
+        razorpayOrderId: razorpayOrder.id,
+        status: 'pending',
+      });
+
+      await paymentIntent.save();
+
+      return { paymentIntent, razorpayOrder, amount: total };
+    } catch (err) {
+      console.error('Razorpay error:', err);
       throw new BadRequestException(
         `Failed to create payment intent: ${err.message}`,
       );
