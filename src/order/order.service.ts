@@ -145,42 +145,46 @@ export class OrderService {
   // Payment intent
   async createPaymentIntent(
     userId: string,
-    amount: number,
+    total: number,
     createOrderDto: CreateOrderDto,
   ) {
-    if (!amount || amount <= 0) {
-      throw new BadRequestException('Invalid order amount');
-    }
-
     try {
+      console.log('🟢 Creating Razorpay Order');
+      console.log('User:', userId);
+      console.log('Total before paise:', total);
+
+      if (!total || total <= 0) {
+        throw new BadRequestException('Order total must be greater than 0');
+      }
+
       const razorpayOrder = await this.razorpayClient.orders.create({
-        amount: amount * 100, // in paise
+        amount: total * 100, // paise
         currency: 'INR',
-        payment_capture: true,
+        receipt: `receipt_${Date.now()}`,
       });
+
+      console.log('🟢 Razorpay Order Response:', razorpayOrder);
 
       const paymentIntent = new this.paymentIntentModel({
         userId,
-        products: createOrderDto.products,
-        amount,
+        amount: total,
+        isPaid: false,
         razorpayOrderId: razorpayOrder.id,
-        status: 'pending',
+        createdAt: new Date(),
       });
 
       await paymentIntent.save();
 
       return { paymentIntent, razorpayOrder };
     } catch (err) {
-      console.error('Razorpay error:', err);
+      console.error('❌ Razorpay Error:', err);
 
-      const message =
-        err?.description ||
-        err?.error?.description ||
-        err?.message ||
-        JSON.stringify(err);
+      // Razorpay error details are usually in err.error.description
+      const description =
+        err?.error?.description || err?.message || 'Unknown error';
 
       throw new BadRequestException(
-        `Failed to create payment intent: ${message}`,
+        `Failed to create payment intent: ${description}`,
       );
     }
   }
