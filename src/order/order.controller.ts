@@ -227,9 +227,7 @@ export class OrderController {
       };
     } catch (err) {
       console.error('create-payment-intent failed:', err);
-      throw new BadRequestException(
-        `Failed to create payment intent: ${err.message || 'Unknown error'}`,
-      );
+      throw err; // <-- do not wrap again
     }
   }
 

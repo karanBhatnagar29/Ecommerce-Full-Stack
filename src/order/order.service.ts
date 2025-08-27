@@ -171,9 +171,16 @@ export class OrderService {
 
       return { paymentIntent, razorpayOrder };
     } catch (err) {
-      console.error('Razorpay order creation failed:', err);
+      console.error('Razorpay error:', err);
+
+      const message =
+        err?.description ||
+        err?.error?.description ||
+        err?.message ||
+        JSON.stringify(err);
+
       throw new BadRequestException(
-        `Failed to create payment intent: ${err.message}`,
+        `Failed to create payment intent: ${message}`,
       );
     }
   }
