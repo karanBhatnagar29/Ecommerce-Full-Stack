@@ -25,6 +25,10 @@ class OrderProductDto {
 class ShippingInfoDto {
   @IsString()
   @IsNotEmpty()
+  name: string; // ✅ Add this field
+
+  @IsString()
+  @IsNotEmpty()
   shippingAddress: string;
 
   @IsString()

@@ -39,7 +39,10 @@ export class OrderService {
 
   // Get All orders
   async getAllOrder() {
-    return this.orderModel.find().populate('user').populate('products.productId');
+    return this.orderModel
+      .find()
+      .populate('user')
+      .populate('products.productId');
   }
 
   // Get order by ID
@@ -145,23 +148,30 @@ export class OrderService {
     amount: number,
     createOrderDto: CreateOrderDto,
   ) {
-    const razorpayOrder = await this.razorpayClient.orders.create({
-      amount: amount * 100, // Razorpay expects paise
-      currency: 'INR',
-      payment_capture: true,
-    });
+    try {
+      const razorpayOrder = await this.razorpayClient.orders.create({
+        amount: amount * 100, // ✅ paise
+        currency: 'INR',
+        payment_capture: true,
+      });
 
-    const paymentIntent = new this.paymentIntentModel({
-      userId,
-      products: createOrderDto.products,
-      amount,
-      razorpayOrderId: razorpayOrder.id,
-      status: 'pending',
-    });
+      const paymentIntent = new this.paymentIntentModel({
+        userId,
+        products: createOrderDto.products,
+        amount,
+        razorpayOrderId: razorpayOrder.id,
+        status: 'pending',
+      });
 
-    await paymentIntent.save();
+      await paymentIntent.save();
 
-    return { paymentIntent, razorpayOrder };
+      return { paymentIntent, razorpayOrder };
+    } catch (err) {
+      console.error('Razorpay error:', err); // ✅ helps debug
+      throw new BadRequestException(
+        `Failed to create payment intent: ${err.message}`,
+      );
+    }
   }
 
   async confirmPaymentAndCreateOrder(
