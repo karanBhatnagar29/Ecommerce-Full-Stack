@@ -65,7 +65,11 @@ export class OrderService {
   }
 
   // Create order (userId comes separately)
-  async createOrder(userId: string, createOrderDto: CreateOrderDto) {
+  async createOrder(
+    userId: string,
+    createOrderDto: CreateOrderDto,
+    status: OrderStatus = OrderStatus.Pending,
+  ) {
     const { products, shippingInfo, paymentInfo, couponCode, orderNotes } =
       createOrderDto;
 
@@ -99,7 +103,7 @@ export class OrderService {
         variantLabel: p.variantLabel,
       })),
       totalPrice,
-      status: OrderStatus.Pending,
+      status, // 👈 dynamic status now
       shippingInfo,
       paymentInfo,
       couponCode,
@@ -246,7 +250,7 @@ export class OrderService {
       throw new BadRequestException('Payment not completed');
     }
 
-    return this.createOrder(userId, orderDto);
+    return this.createOrder(userId, orderDto, OrderStatus.Confirmed); // ✅
   }
 
   // Buy Now session
