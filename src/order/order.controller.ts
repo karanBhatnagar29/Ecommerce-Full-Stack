@@ -308,6 +308,24 @@ export class OrderController {
     }
   }
 
+  @Post('payment/verify')
+  async verifyPaymentOnly(
+    @Body()
+    body: {
+      paymentIntentId: string;
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+    },
+  ) {
+    return this.orderService.verifyAndMarkPaymentPaid(
+      body.paymentIntentId,
+      body.razorpay_order_id,
+      body.razorpay_payment_id,
+      body.razorpay_signature,
+    );
+  }
+
   // ========== OTHER EXISTING ENDPOINTS ==========
 
   @Delete('cancel/:id')

@@ -21,6 +21,7 @@ import {
   BuyNowSessionDocument,
 } from './schemas/buy-now-session.schema';
 import Razorpay from 'razorpay';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class OrderService {
@@ -274,5 +275,40 @@ export class OrderService {
 
   async getBuyNowSession(userId: string) {
     return this.buyNowSessionModel.findOne({ userId });
+  }
+
+  async verifyAndMarkPaymentPaid(
+    paymentIntentId: string,
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    razorpaySignature: string,
+  ) {
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) {
+      throw new Error(
+        'RAZORPAY_KEY_SECRET is not defined in environment variables',
+      );
+    }
+
+    // Validate signature
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(razorpayOrderId + '|' + razorpayPaymentId)
+      .digest('hex');
+
+    if (expectedSignature !== razorpaySignature) {
+      throw new BadRequestException('Invalid payment signature');
+    }
+
+    // Update PaymentIntent
+    const intent = await this.paymentIntentModel.findById(paymentIntentId);
+    if (!intent) throw new NotFoundException('Payment intent not found');
+
+    intent.isPaid = true;
+    intent.razorpayPaymentId = razorpayPaymentId;
+    intent.razorpaySignature = razorpaySignature;
+    await intent.save();
+
+    return intent;
   }
 }
