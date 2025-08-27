@@ -14,9 +14,11 @@ import {
   BuyNowSessionSchema,
 } from './schemas/buy-now-session.schema';
 import { RazorpayProvider } from './razorpay.provider';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule,
     ProductModule,
     MongooseModule.forFeature([
       {
