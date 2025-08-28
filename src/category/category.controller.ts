@@ -12,6 +12,7 @@ import {
   UploadedFile,
   Put,
   NotFoundException,
+  Req,
 } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/roles-guards';
 import { Roles } from 'src/auth/roles-decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+// import { AdminAuthGuard } from '../../shared/guards/AdminAuthGuard'
 const multer = require('multer');
 // import { RolesGuard } from 'src/auth/guards/roles.guard';
 // import { Roles } from 'src/common/decorators/roles.decorator';
@@ -28,10 +30,8 @@ const multer = require('multer');
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
   @Post('create')
-  @UseInterceptors(FileInterceptor('image')) // 'image' is the field name in the multipart form
+  @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() dto: CreateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
