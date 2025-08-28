@@ -28,7 +28,7 @@ const multer = require('multer');
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, JwtAuthGuard)
   @Roles('admin')
   @Post('create')
   @UseInterceptors(FileInterceptor('image')) // 'image' is the field name in the multipart form
