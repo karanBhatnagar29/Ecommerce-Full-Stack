@@ -115,4 +115,21 @@ export class AuthService {
       },
     };
   }
+
+  // ✨ 4. Get Logged-in User
+  async getMe(userId: string) {
+    const user = await this.userModel.findById(userId).select('-__v'); // clean response
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      role: user.role,
+    };
+  }
 }

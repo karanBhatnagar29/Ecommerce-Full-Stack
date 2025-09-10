@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -30,6 +38,6 @@ export class AuthController {
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   async getMe(@Req() req) {
-    return req.user; // already has { userId, email, role }
+    return this.authService.getMe(req.user.userId); // ✅ now fetch real user data
   }
 }
