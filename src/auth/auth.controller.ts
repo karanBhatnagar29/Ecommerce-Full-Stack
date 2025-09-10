@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -25,5 +25,11 @@ export class AuthController {
   async completeProfile(@Req() req, @Body() dto: CompleteProfileDto) {
     const userId = req.user.userId; // your JwtStrategy maps this as `userId`, not `sub`
     return this.authService.completeProfile(userId, dto);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  async getMe(@Req() req) {
+    return req.user; // already has { userId, email, role }
   }
 }
