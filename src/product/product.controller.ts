@@ -15,7 +15,7 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 @Controller('product')
 export class ProductController {
   cloudinaryService: any;
@@ -35,7 +35,7 @@ export class ProductController {
 
   // create('create')
   @Post('create')
-  @UseInterceptors(FilesInterceptor('images')) // expects files in 'images' field
+  @UseInterceptors(AnyFilesInterceptor()) // Accept all file fields
   async createProduct(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() body: any,
@@ -55,7 +55,7 @@ export class ProductController {
 
   // patch('update/:id')
   @Patch('update/:id')
-  @UseInterceptors(FilesInterceptor('images')) // Accepts files in 'images' field
+  @UseInterceptors(AnyFilesInterceptor()) // Accept all file fields
   async updateProduct(
     @Param('id') id: string,
     @UploadedFiles() files: Express.Multer.File[],
