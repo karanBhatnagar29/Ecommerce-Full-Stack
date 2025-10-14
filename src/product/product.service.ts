@@ -49,8 +49,7 @@ export class ProductService {
     files?: Express.Multer.File[],
   ) {
     try {
-      const imageUrls: string[] = [];
-
+      // Helper function for Cloudinary upload
       const uploadToCloudinary = (
         file: Express.Multer.File,
       ): Promise<string> => {
@@ -60,26 +59,47 @@ export class ProductService {
             (error, result) => {
               if (error) return reject(error);
               if (!result)
-                return reject(new Error('No result returned from Cloudinary'));
+                return reject(new Error('No result from Cloudinary'));
               resolve(result.secure_url);
             },
           );
-
           streamifier.createReadStream(file.buffer).pipe(uploadStream);
         });
       };
 
-      if (files?.length) {
-        for (const file of files) {
+      const productImages: string[] = [];
+      const variantImagesMap: Record<number, string[]> = {};
+
+      // ✅ Sort files into product-level or variant-level
+      for (const file of files || []) {
+        if (file.fieldname === 'images') {
           const url = await uploadToCloudinary(file);
-          imageUrls.push(url);
+          productImages.push(url);
+        } else if (file.fieldname.startsWith('variantImages[')) {
+          const match = file.fieldname.match(/variantImages\[(\d+)\]/);
+          if (match) {
+            const variantIndex = parseInt(match[1]);
+            const url = await uploadToCloudinary(file);
+            if (!variantImagesMap[variantIndex])
+              variantImagesMap[variantIndex] = [];
+            variantImagesMap[variantIndex].push(url);
+          }
         }
       }
+
+      // ✅ Attach uploaded images to their variants
+      const variantsWithImages = (createProductDto.variants || []).map(
+        (v, index) => ({
+          ...v,
+          images: variantImagesMap[index] || [],
+        }),
+      );
 
       const productData = {
         ...createProductDto,
         category: new Types.ObjectId(createProductDto.category),
-        images: imageUrls,
+        images: productImages,
+        variants: variantsWithImages,
       };
 
       const product = await this.productModel.create(productData);
@@ -159,14 +179,13 @@ export class ProductService {
   }
 
   // ✅ Get products by category name
-async getProductsByCategorySlug(slug: string) {
-  const category = await this.categoryModel.findOne({ slug }).exec();
+  async getProductsByCategorySlug(slug: string) {
+    const category = await this.categoryModel.findOne({ slug }).exec();
 
-  if (!category) {
-    throw new NotFoundException(`Category "${slug}" not found`);
+    if (!category) {
+      throw new NotFoundException(`Category "${slug}" not found`);
+    }
+
+    return this.productModel.find({ category: category._id }).exec();
   }
-
-  return this.productModel.find({ category: category._id }).exec();
-}
-
 }

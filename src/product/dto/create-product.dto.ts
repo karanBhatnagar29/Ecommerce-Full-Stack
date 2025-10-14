@@ -18,6 +18,10 @@ class VariantDto {
 
   @IsNumber()
   stock: number;
+
+  @IsArray()
+  @IsOptional()
+  images?: string[];
 }
 
 export class CreateProductDto {

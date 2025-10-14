@@ -16,6 +16,10 @@ export class Variant {
 
   @Prop({ default: 0 })
   stock: number;
+
+  // 👇 New field: multiple images for this variant
+  @Prop({ type: [String], default: [] })
+  images: string[];
 }
 
 export const VariantSchema = SchemaFactory.createForClass(Variant);
@@ -34,8 +38,9 @@ export class Product {
   @Prop()
   brand?: string;
 
-  @Prop({ type: [String] })
-  images?: string[];
+  // 👇 optional general images for the product itself
+  @Prop({ type: [String], default: [] })
+  images: string[];
 
   @Prop({ type: [VariantSchema], required: true })
   variants: Variant[];
@@ -54,3 +59,4 @@ export class Product {
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
+

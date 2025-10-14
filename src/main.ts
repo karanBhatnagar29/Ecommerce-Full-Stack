@@ -16,6 +16,7 @@ async function bootstrap() {
       'http://63.178.76.247:3001',
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://localhost:3002',
       'http://63.178.76.247:3002',
       'http://www.zestycrops.com',
       'http://zestycrops.com',

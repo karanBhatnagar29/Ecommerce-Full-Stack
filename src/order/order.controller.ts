@@ -184,7 +184,6 @@ export class OrderController {
 
   // ========== ADMIN ==========
 
-  @Roles('admin')
   @Get()
   async GetAll() {
     return this.orderService.getAllOrder();
