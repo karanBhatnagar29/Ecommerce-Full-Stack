@@ -111,6 +111,7 @@ export class ProductService {
   }
 
   // ✅ Update product
+  // ✅ Update product
   async updateProduct(
     id: string,
     updateProductDto: UpdateProductDto,
@@ -123,44 +124,63 @@ export class ProductService {
         updateData.category = new Types.ObjectId(updateProductDto.category);
       }
 
-      // Upload new images if provided
-      if (files?.length) {
-        const imageUrls: string[] = [];
+      const uploadToCloudinary = (
+        file: Express.Multer.File,
+      ): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'products' },
+            (error, result) => {
+              if (error) return reject(error);
+              if (!result) return reject(new Error('No result returned'));
+              resolve(result.secure_url);
+            },
+          );
+          streamifier.createReadStream(file.buffer).pipe(uploadStream);
+        });
+      };
 
-        const uploadToCloudinary = (
-          file: Express.Multer.File,
-        ): Promise<string> => {
-          return new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-              { folder: 'products' },
-              (error, result) => {
-                if (error) return reject(error);
-                if (!result)
-                  return reject(
-                    new Error('No result returned from Cloudinary'),
-                  );
-                resolve(result.secure_url);
-              },
-            );
+      const productImages: string[] = [];
+      const variantImagesMap: Record<number, string[]> = {};
 
-            streamifier.createReadStream(file.buffer).pipe(uploadStream);
-          });
-        };
-
-        for (const file of files) {
+      for (const file of files || []) {
+        if (file.fieldname === 'images') {
           const url = await uploadToCloudinary(file);
-          imageUrls.push(url);
+          productImages.push(url);
+        } else if (file.fieldname.startsWith('variantImages[')) {
+          const match = file.fieldname.match(/variantImages\[(\d+)\]/);
+          if (match) {
+            const variantIndex = parseInt(match[1]);
+            const url = await uploadToCloudinary(file);
+            if (!variantImagesMap[variantIndex])
+              variantImagesMap[variantIndex] = [];
+            variantImagesMap[variantIndex].push(url);
+          }
         }
+      }
 
-        updateData.images = imageUrls;
+      // ✅ Merge new variant images
+      const variantsWithImages = (updateProductDto.variants || []).map(
+        (v, index) => ({
+          ...v,
+          images: [...(v.images || []), ...(variantImagesMap[index] || [])],
+        }),
+      );
+
+      updateData.variants = variantsWithImages;
+
+      // ✅ Merge new + existing product-level images
+      if (productImages.length > 0) {
+        updateData.images = [
+          ...(updateProductDto.images || []),
+          ...productImages,
+        ];
       }
 
       const updatedProduct = await this.productModel.findByIdAndUpdate(
         id,
         updateData,
-        {
-          new: true,
-        },
+        { new: true },
       );
 
       if (!updatedProduct) throw new NotFoundException('Product not found');
